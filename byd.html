@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>¿Qué te mueve?</title>
+<meta name="description" content="Una obra para tus dedos. Proyecto académico de activación para BYD.">
+<meta property="og:title" content="¿Qué te mueve?">
+<meta property="og:description" content="Una obra para tus dedos. Dos minutos. Mejor con audífonos.">
+<meta name="theme-color" content="#04060A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300;1,6..72,400&display=swap">
+<style>
+/* Una obra a pantalla completa: el lienzo es el protagonista; el texto solo susurra la instrucción. */
+:root{
+  --bg:#04060A; --ink:#F2F5F7; --muted:#8C99A6; --cyan:#5FE3F0; --coral:#FF8A7A; --gold:#FFD27A;
+  --serif:"Newsreader",Georgia,serif; --sans:"Manrope","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;overscroll-behavior:none}
+body{font-family:var(--sans);-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+canvas#art{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:10px}
+
+.ui{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) max(22px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 18px) max(22px,env(safe-area-inset-left,0px))}
+.top{display:flex;justify-content:space-between;align-items:center;min-height:36px}
+.dots{display:flex;gap:6px}
+.dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.18);transition:background .5s,transform .5s}
+.dots i.on{background:var(--cyan)}
+.dots i.now{background:var(--ink);transform:scale(1.5)}
+.mini{pointer-events:auto;background:none;border:0;color:var(--muted);font-size:.78rem;letter-spacing:.08em;padding:10px 4px;cursor:pointer;min-height:40px}
+.whisper{text-align:center;transition:opacity .9s ease,transform .9s ease}
+.whisper.hide{opacity:0;transform:translateY(8px)}
+.whisper .k{display:block;font-size:.68rem;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-weight:700}
+.whisper .l{display:block;font-family:var(--serif);font-weight:300;font-size:clamp(1.35rem,6.4vw,1.9rem);line-height:1.2;text-wrap:balance}
+.whisper .l em{color:var(--cyan)}
+.echo{position:fixed;left:0;right:0;top:38%;text-align:center;padding:0 28px;font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(1.5rem,7vw,2.2rem);line-height:1.2;
+  pointer-events:none;opacity:0;transition:opacity 1.1s ease;text-wrap:balance;text-shadow:0 0 30px rgba(0,0,0,.8)}
+.echo.show{opacity:1}
+
+/* Portada */
+.cover{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:14px;padding:0 28px;z-index:3}
+.cover[hidden]{display:none}
+.cover h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.8rem,13vw,4.4rem);line-height:1;margin:0 0 6px;letter-spacing:-.02em}
+.cover h1 em{color:var(--cyan)}
+.cover p{margin:0;color:var(--muted);max-width:22em;line-height:1.5}
+.btn{pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:0 1.7rem;border-radius:999px;border:0;cursor:pointer;font-weight:800;background:var(--ink);color:var(--bg);text-decoration:none;width:min(320px,100%)}
+.btn.line{background:none;color:var(--ink);border:1px solid rgba(255,255,255,.25)}
+.stack{display:flex;flex-direction:column;gap:10px;align-items:center;width:100%;margin-top:14px}
+.legal{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);text-align:center;font-size:.7rem;color:var(--muted);opacity:.8;padding:0 20px}
+
+/* Palabra */
+.word{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 28px;z-index:3}
+.word[hidden]{display:none}
+.word input{pointer-events:auto;width:min(340px,100%);background:transparent;border:0;border-bottom:1.5px solid rgba(255,255,255,.35);text-align:center;font-family:var(--serif);font-style:italic;font-size:2rem;padding:8px 4px;color:var(--ink);-webkit-user-select:text;user-select:text;border-radius:0}
+.word input:focus{outline:none;border-bottom-color:var(--cyan)}
+.word input::placeholder{color:rgba(255,255,255,.25)}
+
+/* Final */
+.final{position:fixed;left:0;right:0;bottom:0;z-index:3;padding:0 max(24px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 18px) max(24px,env(safe-area-inset-left,0px));
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;background:linear-gradient(to top,rgba(4,6,10,.96) 55%,rgba(4,6,10,0));padding-top:60px}
+.final[hidden]{display:none}
+.final .facts{font-family:var(--serif);font-weight:300;font-size:1.08rem;line-height:1.45;color:#CBD5DD;margin:0 0 6px;max-width:24em}
+.final .facts b{font-weight:400;color:var(--ink)}
+.final .sig{font-size:.68rem;letter-spacing:.32em;color:var(--muted);font-weight:800;margin-top:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<canvas id="art" aria-label="Lienzo interactivo"></canvas>
+
+<div class="ui" aria-live="polite">
+  <div class="top">
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <button class="mini" id="skip" type="button" hidden>Saltar</button>
+  </div>
+  <div class="whisper hide" id="whisper"><span class="k" id="wk"></span><span class="l" id="wl"></span></div>
+</div>
+<div class="echo" id="echo"></div>
+
+<section class="cover" id="cover">
+  <h1>¿Qué te <em>mueve</em>?</h1>
+  <p>Una obra para tus dedos. Dos minutos.<br>No hay respuestas. Solo gestos.</p>
+  <div class="stack">
+    <button class="btn" id="startSound" type="button">Entrar con sonido</button>
+    <button class="btn line" id="startSilent" type="button">Entrar en silencio</button>
+  </div>
+  <p style="font-size:.8rem;margin-top:8px">Mejor con audífonos.</p>
+</section>
+<p class="legal" id="legal">Proyecto académico · Lumina Publicidad · No es un sitio oficial de BYD</p>
+
+<div class="word" id="word" hidden>
+  <label class="sr" for="wordIn">Una palabra que te mueva</label>
+  <input id="wordIn" maxlength="18" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="una palabra" enterkeyhint="done">
+  <button class="btn" id="wordGo" type="button">Soltarla</button>
+  <button class="mini" id="wordKeep" type="button">Prefiero guardarla para mí</button>
+</div>
+
+<section class="final" id="final" hidden>
+  <p class="facts" id="facts"></p>
+  <div class="stack" style="margin-top:4px">
+    <button class="btn" id="save" type="button">Guardar mi imagen</button>
+    <a class="btn line" id="cta" href="https://www.bydauto.com.co/?utm_source=activacion&amp;utm_medium=qr&amp;utm_campaign=que_te_mueve" target="_blank" rel="noopener">Descubre BYD ↗</a>
+    <button class="mini" id="again" type="button">Otra vez</button>
+  </div>
+  <div class="sig">BYD · BUILD YOUR DREAMS</div>
+</section>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <path id="carPath" d="M10 118 C14 100 32 92 60 86 C88 60 130 46 190 44 C238 42 276 52 300 68 C330 74 360 80 384 88 C402 94 410 104 410 116 L388 116 A26 26 0 0 0 336 116 L130 116 A26 26 0 0 0 78 116 Z M140 72 C170 58 214 54 248 56 C268 58 282 64 292 72 L150 78 Z M104 116 m-16 0 a16 16 0 1 0 32 0 a16 16 0 1 0 -32 0 M362 116 m-16 0 a16 16 0 1 0 32 0 a16 16 0 1 0 -32 0"/>
+</svg>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ====================== BASE ====================== */
+  const cv = document.getElementById("art"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, DPR = 1, M = 0;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight; M = Math.min(W, H);
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  resize(); window.addEventListener("resize", resize);
+
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const dist = (a, b, c, d) => Math.hypot(a - c, b - d);
+  const vib = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+  const COL = { cyan: [95, 227, 240], coral: [255, 138, 122], gold: [255, 210, 122], white: [235, 242, 247], violet: [170, 140, 255] };
+  const rgba = (c, a) => "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")";
+  function track(event, data) {
+    const p = Object.assign({ event, campaign: "que_te_mueve" }, data || {});
+    if (Array.isArray(window.dataLayer)) window.dataLayer.push(p);
+    if (window.console && console.debug) console.debug("[track]", p);
+  }
+
+  /* ====================== MEMORIA DEL RECORRIDO (solo en este celular, solo mientras dura) ====================== */
+  const mem = { bpm: 0, chase: 0, cameStill: false, released: false, stretch: 0, word: "", still: false };
+
+  /* ====================== SONIDO (solo si la persona lo elige) ====================== */
+  const S = { on: false, ac: null, master: null, drone: null, filt: null };
+  function audioInit() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      S.ac = new AC(); S.master = S.ac.createGain(); S.master.gain.value = .9; S.master.connect(S.ac.destination);
+      S.filt = S.ac.createBiquadFilter(); S.filt.type = "lowpass"; S.filt.frequency.value = 300; S.filt.connect(S.master);
+      const g = S.ac.createGain(); g.gain.value = 0; g.connect(S.filt);
+      [55, 82.4, 110.3].forEach((f, i) => { const o = S.ac.createOscillator(); o.type = i ? "sawtooth" : "sine"; o.frequency.value = f; o.detune.value = rnd(-8, 8); const og = S.ac.createGain(); og.gain.value = i ? .025 : .09; o.connect(og).connect(g); o.start(); });
+      g.gain.linearRampToValueAtTime(1, S.ac.currentTime + 3);
+      S.drone = g; S.on = true;
+    } catch (e) { S.on = false; }
+  }
+  function droneTo(freq) { if (!S.on) return; S.filt.frequency.setTargetAtTime(freq, S.ac.currentTime, .4); }
+  function env(node, peak, a, d) { const t = S.ac.currentTime; node.gain.setValueAtTime(0, t); node.gain.linearRampToValueAtTime(peak, t + a); node.gain.exponentialRampToValueAtTime(.0001, t + a + d); }
+  function thump() { if (!S.on) return; const o = S.ac.createOscillator(), g = S.ac.createGain(); o.type = "sine"; o.frequency.setValueAtTime(90, S.ac.currentTime); o.frequency.exponentialRampToValueAtTime(42, S.ac.currentTime + .22); o.connect(g).connect(S.master); env(g, .9, .005, .32); o.start(); o.stop(S.ac.currentTime + .4); }
+  function chime(f, v) { if (!S.on) return; const o = S.ac.createOscillator(), g = S.ac.createGain(); o.type = "sine"; o.frequency.value = f; o.connect(g).connect(S.master); env(g, v || .12, .01, 1.4); o.start(); o.stop(S.ac.currentTime + 1.6); }
+  function whoosh(up) { if (!S.on) return; const n = S.ac.createBufferSource(), b = S.ac.createBuffer(1, S.ac.sampleRate * 1.2, S.ac.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; n.buffer = b; const f = S.ac.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 2; const t = S.ac.currentTime; f.frequency.setValueAtTime(up ? 300 : 2400, t); f.frequency.exponentialRampToValueAtTime(up ? 3200 : 200, t + 1.1); const g = S.ac.createGain(); n.connect(f).connect(g).connect(S.master); env(g, .35, .08, 1); n.start(); }
+  let hum = null;
+  function humStart() { if (!S.on || hum) return; const o = S.ac.createOscillator(), g = S.ac.createGain(); o.type = "triangle"; o.frequency.value = 180; o.connect(g).connect(S.master); g.gain.value = 0; g.gain.linearRampToValueAtTime(.05, S.ac.currentTime + .3); o.start(); hum = { o, g }; }
+  function humSet(f, v) { if (!hum) return; hum.o.frequency.setTargetAtTime(f, S.ac.currentTime, .05); hum.g.gain.setTargetAtTime(v, S.ac.currentTime, .1); }
+  function humStop() { if (!hum) return; const h = hum; hum = null; h.g.gain.setTargetAtTime(0, S.ac.currentTime, .1); setTimeout(() => { try { h.o.stop(); } catch (e) {} }, 600); }
+
+  /* ====================== PARTÍCULAS ====================== */
+  const P = [];
+  function spawn(x, y, c, o) {
+    o = o || {};
+    P.push({ x, y, vx: o.vx || 0, vy: o.vy || 0, r: o.r || rnd(.8, 2.2), c: c || COL.white, a: o.a == null ? rnd(.35, .9) : o.a, tx: null, ty: null, free: true, seed: Math.random() * 1000, life: o.life || 0, life0: o.life || 0 });
+  }
+  function scatterSeed(n, c) { for (let i = 0; i < n; i++) spawn(rnd(0, W), rnd(0, H), c, { a: rnd(.15, .5) }); }
+  function burst(x, y, n, c, sp) { for (let i = 0; i < n; i++) { const a = rnd(0, Math.PI * 2), s = rnd(.5, sp || 6); spawn(x, y, c, { vx: Math.cos(a) * s, vy: Math.sin(a) * s, r: rnd(.8, 2.6) }); } }
+  const rings = [];
+  function ring(x, y, c, max) { rings.push({ x, y, r: 4, max: max || M * .45, c, a: .9 }); }
+
+  /* ====================== RITMO ====================== */
+  let T = 0;
+  const beat = () => { const b = mem.bpm || 66; const ph = (T * b / 60) % 1; return Math.exp(-ph * 7); };
+  let lastBeatPh = 0;
+
+  /* ====================== PUNTEROS ====================== */
+  const ptr = new Map();
+  let lastMove = 0;
+  cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); const p = { id: e.pointerId, x: e.clientX, y: e.clientY, px: e.clientX, py: e.clientY, vx: 0, vy: 0, t: T }; ptr.set(e.pointerId, p); lastMove = T; idle(); if (cur && cur.down) cur.down(p); });
+  cv.addEventListener("pointermove", e => { const p = ptr.get(e.pointerId); if (!p) return; p.vx = e.clientX - p.x; p.vy = e.clientY - p.y; p.px = p.x; p.py = p.y; p.x = e.clientX; p.y = e.clientY; if (Math.hypot(p.vx, p.vy) > 1.5) lastMove = T; if (cur && cur.move) cur.move(p); });
+  const end = e => { const p = ptr.get(e.pointerId); if (!p) return; ptr.delete(e.pointerId); if (cur && cur.up) cur.up(p); };
+  cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+  cv.addEventListener("contextmenu", e => e.preventDefault());
+
+  /* ====================== TEXTO ====================== */
+  const wk = $("wk"), wl = $("wl"), wh = $("whisper"), echoEl = $("echo");
+  let whisperT = 0;
+  function say(k, l) { clearTimeout(whisperT); wh.classList.add("hide"); whisperT = setTimeout(() => { wk.textContent = k || ""; wl.innerHTML = l || ""; wh.classList.remove("hide"); }, 380); }
+  let echoT = 0;
+  function echo(t, ms) { clearTimeout(echoT); echoEl.textContent = t; echoEl.classList.add("show"); if (ms) echoT = setTimeout(() => echoEl.classList.remove("show"), ms); }
+  const hush = () => { echoEl.classList.remove("show"); };
+
+  /* ====================== CAPÍTULOS ====================== */
+  let cur = null, ci = -1, chapterT = 0, done = false;
+  const dots = $("dots");
+  const timers = [];
+  const later = (f, ms) => { const t = setTimeout(f, ms); timers.push(t); return t; };
+
+  const CH = [];
+
+  // 1 · Lo que te atrae — mantener el dedo: todo viene hacia ti
+  CH.push({
+    key: "Lo que te atrae",
+    enter() { scatterSeed(160, COL.white); this.hold = 0; say(this.key, "Pon un dedo en la pantalla. <em>Y no lo sueltes.</em>"); },
+    down() { humStart(); },
+    up() { humStop(); if (!done) { this.hold = 0; P.forEach(p => { p.vx += rnd(-3, 3); p.vy += rnd(-3, 3); }); whoosh(false); } },
+    update(dt) {
+      const p = [...ptr.values()][0];
+      P.forEach(q => {
+        if (p) { const dx = p.x - q.x, dy = p.y - q.y, d = Math.hypot(dx, dy) + 30, pull = d > 70 ? .6 : -.25; q.vx += dx / d * pull - dy / d * .42; q.vy += dy / d * pull + dx / d * .42; if (d < 140) q.c = COL.cyan; }
+      });
+      if (p && !done) {
+        const near = P.filter(q => dist(q.x, q.y, p.x, p.y) < 110).length / P.length;
+        humSet(140 + near * 220, .03 + near * .06); droneTo(300 + near * 900);
+        if (near > .45) this.hold += dt; if (this.hold > 1.6) { done = true; vib([20, 30, 40]); chime(523, .14); humStop(); ring(p.x, p.y, COL.cyan); echo("Hay cosas que vienen hacia ti sin que las llames.", 0); later(next, 2600); }
+      }
+    }
+  });
+
+  // 2 · Latido — tocar al ritmo del corazón
+  CH.push({
+    key: "Lo que te sostiene vivo",
+    enter() { this.taps = []; say(this.key, "Toca al ritmo de <em>tu corazón.</em>"); droneTo(260); },
+    down(p) {
+      if (done) return;
+      const now = performance.now(); this.taps.push(now);
+      ring(p.x, p.y, COL.coral, M * .55); vib(28); thump();
+      P.forEach(q => { const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) + 20; q.vx += dx / d * 3.2; q.vy += dy / d * 3.2; q.c = COL.coral; });
+      const iv = []; for (let i = 1; i < this.taps.length; i++) { const d = this.taps[i] - this.taps[i - 1]; if (d > 280 && d < 1600) iv.push(d); }
+      if (iv.length >= 2) { const last = iv.slice(-5); const avg = last.reduce((a, b) => a + b, 0) / last.length; this.bpm = Math.round(60000 / avg); echo(String(this.bpm), 900); }
+      if (iv.length >= 6) {
+        done = true; mem.bpm = clamp(this.bpm, 40, 180);
+        later(() => { echo("Late a " + mem.bpm + " por minuto. Lo vamos a llevar contigo.", 0); }, 900);
+        later(next, 3600);
+      }
+    },
+    update() { if (!done && !this.hinted && this.taps.length === 0 && chapterT > 7) { this.hinted = true; say(this.key, "Un toque por latido. <em>Despacio.</em>"); } }
+  });
+
+  // 3 · Lo que persigues — huye mientras la persigues; llega cuando te quedas quieto
+  CH.push({
+    key: "Lo que persigues",
+    enter() { this.o = { x: W / 2, y: H * .45, vx: 0, vy: 0 }; this.chase = 0; this.still = 0; this.come = false; this.hinted = false; say(this.key, "Atrápala."); droneTo(500); },
+    update(dt) {
+      const o = this.o, p = [...ptr.values()][0];
+      if (!this.come && !done) {
+        if (p) {
+          const d = dist(p.x, p.y, o.x, o.y);
+          if (d < M * .42) { const k = (M * .42 - d) / (M * .42); o.vx += (o.x - p.x) / d * k * 2.4; o.vy += (o.y - p.y) / d * k * 2.4; }
+          if ((T - lastMove) < .25) this.chase += dt;
+        }
+        const moving = p && (T - lastMove) < .25;
+        this.still = moving ? 0 : this.still + dt;
+        if ((this.chase > 3 && this.still > 1.8) || chapterT > 16) { this.come = true; echo("Sin moverte.", 1600); chime(392, .08); }
+        if (this.chase > 9 && !this.hinted) { this.hinted = true; say(this.key, "¿Y si dejas de <em>perseguirla</em>?"); }
+      }
+      if (this.come && !done) {
+        const tx = p ? p.x : W / 2, ty = p ? p.y : H * .55;
+        o.vx += (tx - o.x) * .004; o.vy += (ty - o.y) * .004;
+        if (dist(o.x, o.y, tx, ty) < 26) { done = true; mem.chase = Math.round(this.chase); mem.cameStill = this.chase > 3 && this.still > 1.8; burst(o.x, o.y, 70, COL.gold, 7); ring(o.x, o.y, COL.gold); vib([15, 40, 15]); chime(659, .16); echo("A veces llega cuando dejas de perseguirlo.", 0); later(next, 3000); }
+      }
+      o.vx *= .93; o.vy *= .93; o.x += o.vx; o.y += o.vy;
+      // deambula sola y las paredes la devuelven: si la arrinconas, se desliza y se escapa por un lado
+      o.vx += Math.sin(T * .9 + 1.3) * .08; o.vy += Math.cos(T * .7) * .08;
+      const mX = 56, mT = 90, mB = 140;
+      if (o.x < mX) o.vx += (mX - o.x) * .03; if (o.x > W - mX) o.vx -= (o.x - (W - mX)) * .03;
+      if (o.y < mT) o.vy += (mT - o.y) * .03; if (o.y > H - mB) o.vy -= (o.y - (H - mB)) * .03;
+      if (p && !this.come && (o.x < mX + 10 || o.x > W - mX - 10 || o.y < mT + 10 || o.y > H - mB - 10)) { const sx = o.x < W / 2 ? 1 : -1, sy = o.y < H / 2 ? 1 : -1; if (dist(p.x, p.y, o.x, o.y) < 110) { o.vx += sx * 3 + (p.y > o.y ? -2 : 2); o.vy += sy * 3; } }
+      o.x = clamp(o.x, 14, W - 14); o.y = clamp(o.y, 60, H - 100);
+      if (!done && Math.random() < .6) spawn(o.x + rnd(-4, 4), o.y + rnd(-4, 4), COL.gold, { vx: -o.vx * .3 + rnd(-.4, .4), vy: -o.vy * .3 + rnd(-.4, .4), r: rnd(.6, 1.6), a: .8, life: rnd(.8, 1.6) });
+      P.forEach(q => { if (q.life0) return; const d = dist(q.x, q.y, o.x, o.y) + 40; q.vx += (o.x - q.x) / d * .03; q.vy += (o.y - q.y) / d * .03; });
+    },
+    draw() { if (done) return; const o = this.o, b = 1 + beat() * .25; glow(o.x, o.y, 26 * b, COL.gold, .9); dot(o.x, o.y, 7, COL.white, 1); }
+  });
+
+  // 4 · Lo que te cuesta soltar — se resiste, vuelve; hay que alejarlo y soltar
+  CH.push({
+    key: "Lo que te cuesta soltar",
+    enter() { this.k = { x: W / 2, y: H * .52, vx: 0, vy: 0 }; this.grab = null; this.tries = 0; say(this.key, "Arrástralo lejos. <em>Y suéltalo.</em>"); droneTo(220); },
+    down(p) { if (done) return; if (dist(p.x, p.y, this.k.x, this.k.y) < 90) { this.grab = p.id; humStart(); vib(10); } },
+    up(p) {
+      if (done || this.grab !== p.id) return; this.grab = null; humStop();
+      const k = this.k, cx = W / 2, cy = H * .52, d = dist(k.x, k.y, cx, cy);
+      if (d > M * .3) {
+        done = true; mem.released = true;
+        const ang = Math.atan2(k.y - cy, k.x - cx);
+        burst(k.x, k.y, 120, COL.violet, 9); P.forEach(q => { if (dist(q.x, q.y, k.x, k.y) < 140) { q.vx += Math.cos(ang) * 6; q.vy += Math.sin(ang) * 6; } });
+        ring(k.x, k.y, COL.violet, M); vib([30, 50, 60]); whoosh(true); chime(784, .12);
+        this.gone = true; echo("Soltar también es moverse.", 0); later(next, 2800);
+      } else { this.tries++; vib(8); echo(this.tries > 1 ? "Más lejos." : "Todavía no.", 1200); }
+    },
+    update() {
+      const k = this.k, cx = W / 2, cy = H * .52;
+      if (this.gone) return;
+      const p = this.grab != null ? ptr.get(this.grab) : null;
+      if (p) { const tx = cx + (p.x - cx) * .62, ty = cy + (p.y - cy) * .62; k.vx += (tx - k.x) * .25; k.vy += (ty - k.y) * .25; const t = dist(k.x, k.y, cx, cy) / (M * .3); humSet(120 + t * 160, .04 + t * .05); }
+      else { k.vx += (cx - k.x) * .06; k.vy += (cy - k.y) * .06; }
+      k.vx *= .78; k.vy *= .78; k.x += k.vx; k.y += k.vy;
+      P.forEach(q => { const d = dist(q.x, q.y, k.x, k.y) + 20; q.vx += (k.x - q.x) / d * .12; q.vy += (k.y - q.y) / d * .12; });
+    },
+    draw() {
+      if (this.gone) return; const k = this.k, cx = W / 2, cy = H * .52;
+      const t = clamp(dist(k.x, k.y, cx, cy) / (M * .3), 0, 1);
+      ctx.strokeStyle = rgba(COL.violet, .25 + t * .5); ctx.lineWidth = 1 + t * 2; ctx.beginPath(); ctx.moveTo(cx, cy);
+      const mx = (cx + k.x) / 2 + Math.sin(T * 30) * t * 6, my = (cy + k.y) / 2 + Math.cos(T * 27) * t * 6; ctx.quadraticCurveTo(mx, my, k.x, k.y); ctx.stroke();
+      dot(cx, cy, 3, COL.violet, .6);
+      const b = 1 + beat() * .12; glow(k.x, k.y, 46 * b, COL.violet, .8); dot(k.x, k.y, 16 * b, [40, 28, 80], 1); ctx.strokeStyle = rgba(COL.violet, .9); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(k.x, k.y, 16 * b, 0, 7); ctx.stroke();
+    }
+  });
+
+  // 5 · Lo que te une — dos dedos, un hilo que se estira sin romperse
+  CH.push({
+    key: "Lo que te une",
+    enter() { this.anchor = null; this.hold = 0; say(this.key, "Pon dos dedos. <em>Sepáralos despacio.</em>"); droneTo(400); },
+    up(p) { if (done) return; if (ptr.size === 0 && T - p.t < .35) { this.anchor = { x: p.x, y: p.y }; vib(8); ring(p.x, p.y, COL.coral, 60); } },
+    pair() { const a = [...ptr.values()]; if (a.length >= 2) return [a[0], a[1]]; if (a.length === 1 && this.anchor) return [this.anchor, a[0]]; return null; },
+    update(dt) {
+      if (!done && chapterT > 7 && !this.hinted) { this.hinted = true; say(this.key, "¿Un solo dedo? Toca un punto, suelta <em>y mantén otro.</em>"); }
+      const pr = this.pair(); this.pr = pr;
+      if (!pr || done) { if (!pr) { this.hold = Math.max(0, this.hold - dt); humStop(); } return; }
+      humStart();
+      const d = dist(pr[0].x, pr[0].y, pr[1].x, pr[1].y), t = clamp(d / (M * .7), 0, 1);
+      humSet(160 + t * 300, .03 + t * .05); droneTo(300 + t * 1200);
+      mem.stretch = Math.max(mem.stretch, t);
+      if (t > .55) this.hold += dt; else this.hold = Math.max(0, this.hold - dt * .5);
+      for (let i = 0; i < 2; i++) { const u = Math.random(); spawn(pr[0].x + (pr[1].x - pr[0].x) * u, pr[0].y + (pr[1].y - pr[0].y) * u, u < .5 ? COL.coral : COL.cyan, { vx: rnd(-.3, .3), vy: rnd(-.3, .3), r: rnd(.6, 1.6) }); }
+      if (this.hold > 2) { done = true; humStop(); vib([20, 30, 20, 30, 40]); chime(587, .12); chime(880, .08); echo("Hay lazos que se estiran y no se rompen.", 0); later(next, 2900); }
+    },
+    draw() {
+      const pr = this.pr; if (!pr) { if (this.anchor && !done) dot(this.anchor.x, this.anchor.y, 6, COL.coral, .9); return; }
+      const d = dist(pr[0].x, pr[0].y, pr[1].x, pr[1].y), t = clamp(d / (M * .7), 0, 1);
+      const g = ctx.createLinearGradient(pr[0].x, pr[0].y, pr[1].x, pr[1].y); g.addColorStop(0, rgba(COL.coral, .9)); g.addColorStop(1, rgba(COL.cyan, .9));
+      ctx.strokeStyle = g; ctx.lineWidth = 3 - t * 2; ctx.beginPath(); ctx.moveTo(pr[0].x, pr[0].y);
+      const mx = (pr[0].x + pr[1].x) / 2 + Math.sin(T * 40) * t * 4, my = (pr[0].y + pr[1].y) / 2 + Math.cos(T * 37) * t * 4; ctx.quadraticCurveTo(mx, my, pr[1].x, pr[1].y); ctx.stroke();
+      glow(pr[0].x, pr[0].y, 30, COL.coral, .7); glow(pr[1].x, pr[1].y, 30, COL.cyan, .7);
+      if (this.hold > 0) { ctx.strokeStyle = rgba(COL.white, .7); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(pr[1].x, pr[1].y, 40, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp(this.hold / 2, 0, 1)); ctx.stroke(); }
+    }
+  });
+
+  // 6 · Una palabra — se escribe y se vuelve energía
+  CH.push({
+    key: "Lo que guardas",
+    enter() { say(this.key, "Escribe una palabra <em>que te mueva.</em>"); $("word").hidden = false; setTimeout(() => $("wordIn").focus({ preventScroll: true }), 500); droneTo(350); },
+    release(w) {
+      $("word").hidden = true; $("wordIn").blur();
+      if (!w) { echo("Hay palabras que es mejor guardar.", 0); later(next, 2400); return; }
+      mem.word = w; done = true;
+      const pts = textPoints(w, Math.min(W * .9, 520));
+      pts.forEach(pt => spawn(pt.x + rnd(-80, 80), pt.y + rnd(-200, 200), COL.cyan, { r: rnd(.8, 1.8), a: .9 }));
+      const start = P.length - pts.length; pts.forEach((pt, i) => { const q = P[start + i]; q.tx = pt.x; q.ty = pt.y; q.free = false; });
+      chime(523, .1); chime(659, .08); vib(20);
+      later(() => { P.forEach(q => { if (!q.free) { q.free = true; q.tx = null; q.vx = rnd(-3, 3); q.vy = rnd(-3, 3); } }); whoosh(true); echo("Ya es parte de ti.", 0); }, 2300);
+      later(next, 4600);
+    },
+    exit() { $("word").hidden = true; }
+  });
+
+  // 7 · Quietud — no hacer nada; la energía toma forma
+  CH.push({
+    key: "Lo que te mueve",
+    enter() { this.still = 0; this.formed = false; say(this.key, "Ahora no hagas nada. <em>Solo respira.</em>"); droneTo(180); },
+    down() { if (this.formed) return; if (this.still > .4) { this.still = 0; echo("Todavía no.", 900); vib(6); } },
+    update(dt) {
+      if (!this.formed) {
+        this.still = ptr.size ? 0 : this.still + dt;
+        if (this.still > 5) { this.formed = true; mem.still = true; formCar(); say("", ""); echo("Todo lo que te mueve también es energía.", 0); chime(392, .12); chime(587, .08); vib([10, 60, 10, 60, 10]); later(() => { echo("BYD · Build Your Dreams", 0); }, 3400); later(next, 6800); }
+      }
+    },
+    draw() {
+      if (this.formed) return;
+      const t = clamp(this.still / 5, 0, 1);
+      ctx.strokeStyle = rgba(COL.white, .35); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(W / 2, H * .5, M * .32, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * t); ctx.stroke();
+    }
+  });
+
+  // 8 · Final — una imagen irrepetible hecha con sus gestos
+  CH.push({
+    key: "",
+    enter() {
+      say("", ""); hush(); releaseAll(); droneTo(700);
+      const f = [];
+      if (mem.bpm) f.push("Tu corazón marcó <b>" + mem.bpm + "</b> por minuto.");
+      if (mem.chase >= 2) f.push(mem.cameStill ? "Perseguiste una luz <b>" + mem.chase + " segundos</b> y llegó cuando dejaste de moverte." : "Perseguiste una luz <b>" + mem.chase + " segundos</b> y al final llegó por sí sola.");
+      if (mem.released) f.push("Soltaste lo que pesaba.");
+      if (mem.stretch > .55) f.push("Estiraste un lazo sin romperlo.");
+      if (mem.word) f.push("Guardas una palabra: <b>" + escapeHtml(mem.word) + "</b>.");
+      f.push("Esta imagen es solo tuya. Nadie más la hizo igual.");
+      $("facts").innerHTML = f.join(" ");
+      $("final").hidden = false; $("skip").hidden = true;
+      track("result_viewed", { bpm: mem.bpm || null, released: mem.released });
+      this.seed = Math.random() * 1000;
+    },
+    update() {
+      const cx = W / 2, cy = H * .34, b = beat();
+      P.forEach((q, i) => {
+        const ringN = i % 4, R = M * (.12 + ringN * .07) * (1 + b * .06), ang = q.seed + T * (.15 + ringN * .05) * (ringN % 2 ? -1 : 1);
+        q.vx += (cx + Math.cos(ang) * R - q.x) * .02; q.vy += (cy + Math.sin(ang) * R * .9 - q.y) * .02;
+      });
+      if (b > .95 && lastBeatPh < .95) { thump(); }
+      lastBeatPh = b;
+    },
+    draw() { if (mem.word) { ctx.save(); ctx.globalCompositeOperation = "source-over"; ctx.fillStyle = rgba(COL.white, .92); ctx.font = "italic 300 " + Math.round(M * .09) + "px Newsreader, Georgia, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(mem.word, W / 2, H * .34); ctx.restore(); } }
+  });
+
+  /* ====================== AYUDANTES DE FORMA ====================== */
+  function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  function textPoints(word, maxW) {
+    const oc = document.createElement("canvas"), w = Math.round(maxW), h = Math.round(maxW * .45); oc.width = w; oc.height = h;
+    const o = oc.getContext("2d"); let fs = h * .7; o.font = "italic 400 " + fs + "px Newsreader, Georgia, serif";
+    while (o.measureText(word).width > w * .92 && fs > 10) { fs -= 4; o.font = "italic 400 " + fs + "px Newsreader, Georgia, serif"; }
+    o.fillStyle = "#fff"; o.textAlign = "center"; o.textBaseline = "middle"; o.fillText(word, w / 2, h / 2);
+    const d = o.getImageData(0, 0, w, h).data, pts = [], step = Math.max(3, Math.round(w / 110));
+    for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) if (d[(y * w + x) * 4 + 3] > 128) pts.push({ x: W / 2 - w / 2 + x, y: H * .42 - h / 2 + y });
+    return pts.slice(0, 420);
+  }
+  function formCar() {
+    const path = $("carPath"), L = path.getTotalLength(), n = Math.min(P.length, 520);
+    const sc = Math.min(W * .88, 520) / 420, ox = W / 2 - 210 * sc, oy = H * .6 - 80 * sc;
+    for (let i = 0; i < P.length; i++) {
+      const q = P[i];
+      if (i < n) { const pt = path.getPointAtLength((i / n) * L); q.tx = ox + pt.x * sc; q.ty = oy + pt.y * sc; q.free = false; q.c = i % 3 ? COL.cyan : COL.white; }
+    }
+    while (P.length < 360) { const i = P.length; const pt = path.getPointAtLength((i / 360) * L); spawn(rnd(0, W), rnd(0, H), COL.cyan); const q = P[P.length - 1]; q.tx = ox + pt.x * sc; q.ty = oy + pt.y * sc; q.free = false; }
+  }
+  const SPR = new Map();
+  function sprite(c) { const k = c.join(","); let s = SPR.get(k); if (s) return s; s = document.createElement("canvas"); s.width = s.height = 32; const o = s.getContext("2d"), g = o.createRadialGradient(16, 16, 0, 16, 16, 16); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(.18, rgba(c, 1)); g.addColorStop(.45, rgba(c, .35)); g.addColorStop(1, rgba(c, 0)); o.fillStyle = g; o.fillRect(0, 0, 32, 32); SPR.set(k, s); return s; }
+  function releaseAll() { P.forEach(q => { q.free = true; q.tx = null; }); }
+  function glow(x, y, r, c, a) { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(c, a)); g.addColorStop(1, rgba(c, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+  function dot(x, y, r, c, a) { ctx.fillStyle = rgba(c, a); ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+
+  /* ====================== FLUJO ====================== */
+  function buildDots() { dots.innerHTML = ""; for (let i = 0; i < CH.length - 1; i++) dots.appendChild(document.createElement("i")); }
+  function paintDots() { [...dots.children].forEach((d, i) => { d.className = i < ci ? "on" : i === ci ? "now" : ""; }); }
+  function go(i) {
+    timers.forEach(clearTimeout); timers.length = 0;
+    if (cur && cur.exit) cur.exit();
+    humStop(); hush();
+    ci = i; cur = CH[i]; chapterT = 0; done = false;
+    paintDots(); $("skip").hidden = i >= CH.length - 1;
+    if (cur.enter) cur.enter();
+    track("chapter_view", { chapter: i + 1 });
+  }
+  function next() { if (ci < CH.length - 1) go(ci + 1); }
+  $("skip").addEventListener("click", () => {
+    track("chapter_skipped", { chapter: ci + 1 });
+    if (ci === 1 && !mem.bpm) mem.bpm = 0;
+    if (ci === 5) { $("word").hidden = true; }
+    next();
+  });
+  $("wordGo").addEventListener("click", () => CH[5].release($("wordIn").value.trim().slice(0, 18)));
+  $("wordIn").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); CH[5].release($("wordIn").value.trim().slice(0, 18)); } });
+  $("wordKeep").addEventListener("click", () => CH[5].release(""));
+
+  function start(sound) {
+    if (sound) audioInit();
+    $("cover").hidden = true; $("legal").hidden = true;
+    buildDots(); go(0);
+    track("experience_started", { sound: !!sound });
+  }
+  $("startSound").addEventListener("click", () => start(true));
+  $("startSilent").addEventListener("click", () => start(false));
+  $("again").addEventListener("click", () => restart());
+
+  function restart() {
+    timers.forEach(clearTimeout); timers.length = 0; humStop(); hush();
+    P.length = 0; rings.length = 0;
+    Object.assign(mem, { bpm: 0, chase: 0, cameStill: false, released: false, stretch: 0, word: "", still: false });
+    $("wordIn").value = ""; $("final").hidden = true; $("word").hidden = true;
+    track("experience_restarted");
+    go(0);
+  }
+
+  /* ====================== GUARDAR IMAGEN ====================== */
+  $("save").addEventListener("click", async () => {
+    const out = document.createElement("canvas"); out.width = 1080; out.height = 1920; const o = out.getContext("2d");
+    o.fillStyle = "#04060A"; o.fillRect(0, 0, 1080, 1920);
+    const s = Math.max(1080 / cv.width, 1920 / cv.height) * 1.0, dw = cv.width * s, dh = cv.height * s;
+    o.drawImage(cv, (1080 - dw) / 2, (1920 - dh) / 2 - 120, dw, dh);
+    const g = o.createLinearGradient(0, 1150, 0, 1920); g.addColorStop(0, "rgba(4,6,10,0)"); g.addColorStop(.35, "rgba(4,6,10,.92)"); g.addColorStop(1, "#04060A"); o.fillStyle = g; o.fillRect(0, 1150, 1080, 770);
+    o.textAlign = "center"; o.fillStyle = "#F2F5F7"; o.font = "300 86px Newsreader, Georgia, serif"; o.fillText("¿Qué te mueve?", 540, 1450);
+    o.font = "300 40px Newsreader, Georgia, serif"; o.fillStyle = "#CBD5DD";
+    const lines = []; if (mem.bpm) lines.push("Mi corazón marcó " + mem.bpm + " por minuto"); if (mem.word) lines.push("«" + mem.word + "»"); if (!lines.length) lines.push("Una imagen hecha con mis gestos");
+    lines.forEach((l, i) => o.fillText(l, 540, 1530 + i * 58));
+    o.font = "800 26px Manrope, system-ui, sans-serif"; o.fillStyle = "#8C99A6"; o.fillText("B Y D  ·  B U I L D   Y O U R   D R E A M S", 540, 1780);
+    o.font = "500 22px Manrope, system-ui, sans-serif"; o.fillText("Proyecto académico · Lumina Publicidad", 540, 1830);
+    out.toBlob(async blob => {
+      if (!blob) return;
+      const file = new File([blob], "que-te-mueve.png", { type: "image/png" });
+      track("image_saved");
+      try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "¿Qué te mueve?" }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "que-te-mueve.png"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }, "image/png");
+  });
+  $("cta").addEventListener("click", () => track("cta_clicked", { cta: "descubre_byd" }));
+
+  /* ====================== MODO STAND (?modo=stand) ====================== */
+  const STAND = new URLSearchParams(location.search).get("modo") === "stand";
+  let idleT = 0;
+  function idle() { if (!STAND) return; clearTimeout(idleT); idleT = setTimeout(() => { if (ci >= 0) { restart(); $("final").hidden = true; } }, 90000); }
+  if (STAND) document.addEventListener("pointerdown", idle, { passive: true });
+
+  /* ====================== BUCLE ====================== */
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(.05, (now - last) / 1000); last = now; T += dt; chapterT += dt;
+    if (cur && cur.update) cur.update(dt);
+
+    // estela: cada cuadro se borra a medias
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = reduce ? "rgba(4,6,10,1)" : "rgba(4,6,10,.22)"; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "lighter";
+
+    const b = beat(), speed = reduce ? .4 : 1;
+    for (let i = P.length - 1; i >= 0; i--) {
+      const q = P[i];
+      if (!q.free && q.tx != null) { q.vx += (q.tx - q.x) * .06; q.vy += (q.ty - q.y) * .06; q.vx *= .78; q.vy *= .78; }
+      else { q.vx += Math.sin(q.seed + T * .7) * .02; q.vy += Math.cos(q.seed * 1.3 + T * .6) * .02; q.vx *= .95; q.vy *= .95; }
+      q.x += q.vx * speed; q.y += q.vy * speed;
+      if (q.free) { if (q.x < -20) q.x = W + 20; if (q.x > W + 20) q.x = -20; if (q.y < -20) q.y = H + 20; if (q.y > H + 20) q.y = -20; }
+      if (q.life0) { q.life -= dt; if (q.life <= 0) { P.splice(i, 1); continue; } q.a = .8 * q.life / q.life0; }
+      const r = q.r * (1 + (mem.bpm ? b * .5 : 0));
+      ctx.globalAlpha = q.a; const sp = sprite(q.c); ctx.drawImage(sp, q.x - r * 2.2, q.y - r * 2.2, r * 4.4, r * 4.4); ctx.globalAlpha = 1;
+    }
+    if (P.length > 900) P.splice(0, P.length - 900);
+    for (let i = rings.length - 1; i >= 0; i--) {
+      const g = rings[i]; g.r += (g.max - g.r) * .06 + 1; g.a *= .94;
+      ctx.strokeStyle = rgba(g.c, g.a); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, 7); ctx.stroke();
+      if (g.a < .02) rings.splice(i, 1);
+    }
+    if (cur && cur.draw) { ctx.globalCompositeOperation = "lighter"; cur.draw(); }
+    requestAnimationFrame(frame);
+  }
+  scatterSeed(70, COL.white);
+  requestAnimationFrame(frame);
+  track("experience_view", { stand: STAND });
+})();
+</script>
+</body>
+</html>
